@@ -1,8 +1,8 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-require "json"
-require "log4r"
+Vagrant.require "json"
+Vagrant.require "log4r"
 
 require_relative "./driver/compose"
 
@@ -31,6 +31,10 @@ module VagrantPlugins
         # In this case, docker buildkit is enabled. Its format is different
         # from standard docker
         matches = result.scan(/writing image .+:([^\s]+)/i).last
+        if !matches
+          # Check for outout of docker using containerd backend store
+          matches = result.scan(/exporting manifest list .+:([^\s]+)/i).last
+        end
         if !matches
           if podman?
             # Check for podman format when it is emulating docker CLI.
@@ -125,8 +129,8 @@ module VagrantPlugins
       end
 
       def image?(id)
-        result = execute('docker', 'images', '-q').to_s
-        result =~ /^#{Regexp.escape(id)}$/
+        result = execute('docker', 'images', '-q', '--no-trunc').to_s
+        result =~ /\b#{Regexp.escape(id)}\b/
       end
 
       # Reads all current docker containers and determines what ports

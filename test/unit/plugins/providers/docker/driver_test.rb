@@ -207,6 +207,16 @@ describe VagrantPlugins::DockerProvider::Driver do
       end
     end
 
+    context "using buildkit with containerd backend output" do
+      let(:stdout) { "exporting manifest list sha256:1a2b3c4d done" }
+
+      it "builds a container with buildkit docker (containerd)" do
+        container_id = subject.build("/tmp/fakedir")
+
+        expect(container_id).to eq(cid)
+      end
+    end
+
     context "using podman emulating docker CLI" do
       let(:stdout) { "1a2b3c4d5e6f7g8h9i10j11k12l13m14n16o17p18q19r20s21t22u23v24w25x2" }
 
@@ -350,6 +360,34 @@ describe VagrantPlugins::DockerProvider::Driver do
       it { expect(result).to be_falsey }
     end
   end
+
+  describe '#image?' do
+    let(:result) { subject.image?(cid) }
+
+    it 'performs the check on all images list' do
+      subject.image?(cid)
+      expect(cmd_executed).to match(/docker images \-q \--no-trunc/)
+    end
+
+    context 'when image id exists' do
+      let(:stdout) { "foo\n#{cid}\nbar" }
+
+      it { expect(result).to be_truthy }
+    end
+
+    context 'when sha265 image id exists' do
+      let(:stdout) { "sha256:foo\nsha256:#{cid}\nsha256:bar" }
+
+      it { expect(result).to be_truthy }
+    end
+
+    context 'when image does not exist' do
+      let(:stdout) { "foo\n#{cid}extra\nbar" }
+
+      it { expect(result).to be_falsey }
+    end
+  end
+
 
   describe '#pull' do
     it 'should pull images' do
